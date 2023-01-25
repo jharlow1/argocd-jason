@@ -13,7 +13,7 @@ spec:
                 matchLabels:
                   argocd.argoproj.io/secret-type: cluster
           - git: 
-              repoURL: https://github.com/vertexinc/cne-k8s-argocd-system.git 
+              repoURL: https://github.com/jharlow1/argocd-jason.git 
               revision: '{{ metadata.labels.vertexinc.com/revision }}'
               files:
                 - path: "clusters/{{ name }}/managed-services/*/config.yaml"
