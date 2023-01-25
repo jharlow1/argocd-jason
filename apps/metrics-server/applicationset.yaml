@@ -39,7 +39,7 @@ spec:
         targetRevision: "{{ metadata.labels.vertexinc.com/revision }}"
         path: charts/umbrella-metrics-server
         helm:
-          valuesFiles:
+          valueFiles:
             - values.yaml
             - values-{{ name }}.yaml
       syncPolicy:
