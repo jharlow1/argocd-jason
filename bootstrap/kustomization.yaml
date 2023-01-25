@@ -4,6 +4,4 @@ kind: Kustomization
 
 resources:
   - argocd-config.yaml
-  - managed-services-appset.yaml
-  - static-resources-appset.yaml
-  - ../apps
+#  - ../apps
