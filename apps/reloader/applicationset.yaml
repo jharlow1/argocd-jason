@@ -6,22 +6,15 @@ metadata:
     templateType: managed-service
 spec:
   generators:
-    - matrix:
-        generators:
-          - clusters:
-              selector:
-                matchLabels:
-                  argocd.argoproj.io/secret-type: cluster
-          - git: 
-              repoURL: https://github.com/jharlow1/argocd-jason.git 
-              revision: '{{ metadata.labels.vertexinc.com/revision }}'
-              files:
-                - path: "clusters/{{ name }}/managed-services/reloader/config.yaml"
+    - clusters:
+        selector:
+          matchLabels:
+            vertexinc.com/cluster_version: "3"
   template:
     metadata:
-      name: "{{ path.basename }}-{{ name }}"
+      name: "reloader-{{ name }}"
       labels:
-        app.kubernetes.io/name: "{{ path.basename }}-{{ name }}"
+        app.kubernetes.io/name: "reloader-{{ name }}"
       namespace: argocd
     spec:
       ignoreDifferences:
@@ -32,47 +25,15 @@ spec:
       project: managed-services
       destination:
         server: "{{ server }}"
-        namespace: "{{ path.basename }}"
+        namespace: "reloader"
       source: 
-        chart: reloader
-        repoURL: https://stakater.github.io/stakater-charts
-        targetRevision: "{{ chartVersion }}"
+        chart: umbrella-reloader
+        repoURL: https://github.com/jharlow1/argocd-jason.git
+        targetRevision: "{{ metadata.labels.vertexinc.com/revision }}"
         helm:
-          releaseName: reloader
-          values: |-
-            reloader:
-              enableHA: true
-              readOnlyRootFileSystem: true
-              deployment:
-                replicas: 2
-                securityContext:
-                  runAsUser: 1000
-                  runAsNonRoot: true
-                containerSecurityContext:
-                  allowPrivilegeEscalation: false
-                  readOnlyRootFilesystem: true
-                  capabilities:
-                    drop:
-                      - ALL
-                image:
-                  pullPolicy: Always
-                livenessProbe:
-                  timeoutSeconds: 5
-                  failureThreshold: 5
-                  periodSeconds: 10
-                  successThreshold: 1
-                readinessProbe:
-                  timeoutSeconds: 15
-                  failureThreshold: 5
-                  periodSeconds: 10
-                  successThreshold: 1
-                resources:
-                    limits:
-                      cpu: 100m
-                      memory: 512Mi
-                    requests:
-                      cpu: 50m
-                      memory: 64Mi
+          valueFiles:
+            - values.yaml
+            - values-{{ name }}.yaml
       syncPolicy:
         automated:
           prune: true
