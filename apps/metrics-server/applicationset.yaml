@@ -60,10 +60,10 @@ spec:
                 memory: 70Mi
             hostNetwork:
               enabled: false
-          syncPolicy:
-            automated:
-              prune: true
-              allowEmpty: true
-              selfHeal: true
-            syncOptions:
-              - CreateNamespace=true
+      syncPolicy:
+        automated:
+          prune: true
+          allowEmpty: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
