@@ -13,3 +13,4 @@ resources:
   - argocd-ns.yaml
   - argocd-rbac-cm.yaml
   - projects
+  - ../apps
