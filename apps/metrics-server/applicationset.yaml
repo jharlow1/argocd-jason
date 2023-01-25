@@ -25,7 +25,6 @@ spec:
         server: "{{ server }}"
         namespace: "metrics-server"
       source: 
-        chart: umbrella-metrics-server
         repoURL: https://github.com/jharlow1/argocd-jason.git
         targetRevision: "{{ metadata.labels.vertexinc.com/revision }}"
         path: charts/umbrella-metrics-server
