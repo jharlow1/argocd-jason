@@ -4,12 +4,10 @@ metadata:
   name: metrics-server
 spec:
   generators:
-    - matrix:
-        generators:
-          - clusters:
-              selector:
-                matchLabels:
-                  vertexinc.com/cluster_version: "3"
+    - clusters:
+        selector:
+          matchLabels:
+            vertexinc.com/cluster_version: "3"
   template:
     metadata:
       name: "{{ path.basename }}-{{ name }}"
