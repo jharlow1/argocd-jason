@@ -10,9 +10,9 @@ spec:
             vertexinc.com/cluster_version: "3"
   template:
     metadata:
-      name: "{{ path.basename }}-{{ name }}"
+      name: "metrics-server-{{ name }}"
       labels:
-        app.kubernetes.io/name: "{{ path.basename }}-{{ name }}"
+        app.kubernetes.io/name: "metrics-server-{{ name }}"
       namespace: argocd
     spec:
       ignoreDifferences:
@@ -23,7 +23,7 @@ spec:
       project: managed-services
       destination:
         server: "{{ server }}"
-        namespace: "{{ path.basename }}"
+        namespace: "metrics-server"
       source: 
         chart: umbrella-metrics-server
         repoURL: https://github.com/jharlow1/argocd-jason.git
