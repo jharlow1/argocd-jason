@@ -40,7 +40,7 @@ spec:
         namespace: argocd
       source:
         path: argocd-config
-        repoURL: "{{ metadata.labels.vertexinc.com/argocd-config-repo }}"
+        repoURL: "{{ metadata.annotations.vertexinc.com/argocd-config-repo }}"
         targetRevision: "{{ metadata.labels.vertexinc.com/revision }}"
       syncPolicy:
         automated:

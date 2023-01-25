@@ -25,7 +25,7 @@ spec:
         server: "{{ server }}"
         namespace: "metrics-server"
       source: 
-        repoURL: "{{ metadata.labels.vertexinc.com/argocd-config-repo }}"
+        repoURL: "{{ metadata.annotations.vertexinc.com/argocd-config-repo }}"
         targetRevision: "{{ metadata.labels.vertexinc.com/revision }}"
         path: charts/umbrella-metrics-server
         helm:
