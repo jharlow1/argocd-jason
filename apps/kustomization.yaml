@@ -21,3 +21,4 @@ namespace: argocd
 # the application anywhere. 
 resources:
   - metrics-server
+  - reloader
