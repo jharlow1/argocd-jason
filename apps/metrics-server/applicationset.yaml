@@ -34,32 +34,14 @@ spec:
         server: "{{ server }}"
         namespace: "{{ path.basename }}"
       source: 
-        chart: metrics-server
-        repoURL: https://kubernetes-sigs.github.io/metrics-server/
-        targetRevision: "{{ chartVersion }}"
+        chart: umbrella-metrics-server
+        repoURL: https://github.com/jharlow1/argocd-jason.git
+        targetRevision: "{{ metadata.labels.vertexinc.com/revision }}"
+        path: charts/umbrella-metrics-server
         helm:
-          releaseName: metrics-server
-          values: |-
-            image:
-              pullPolicy: Always
-            podSecurityContext:
-              fsGroup: 1000
-            securityContext:
-              capabilities:
-                drop: [ALL]
-              readOnlyRootFilesystem: true
-              runAsNonRoot: true
-              allowPrivilegeEscalation: false
-              runAsUser: 1000
-            resources:
-              limits:
-                cpu: 200m
-                memory: 256Mi
-              requests:
-                cpu: 100m
-                memory: 70Mi
-            hostNetwork:
-              enabled: false
+          valuesFiles:
+            - values.yaml
+            - values-{{ name }}.yaml
       syncPolicy:
         automated:
           prune: true
