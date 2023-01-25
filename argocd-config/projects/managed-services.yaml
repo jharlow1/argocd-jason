@@ -7,7 +7,7 @@ metadata:
 spec:
   description: Service applications managed by CNE
   sourceRepos:
-    - https://github.com/jharlow1/argocd-jason.git
+    - "{{ metadata.labels.vertexinc.com/argocd-config-repo }}"
     - https://stefanprodan.github.io/podinfo
     - https://kubernetes-sigs.github.io/external-dns/*
     - https://kubernetes-sigs.github.io/metrics-server/*
