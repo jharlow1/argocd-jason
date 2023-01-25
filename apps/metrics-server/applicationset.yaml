@@ -1,0 +1,69 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: metrics-server
+  labels:
+    templateType: managed-service
+spec:
+  generators:
+    - matrix:
+        generators:
+          - clusters:
+              selector:
+                matchLabels:
+                  argocd.argoproj.io/secret-type: cluster
+          - git: 
+              repoURL: https://github.com/vertexinc/cne-k8s-argocd-system.git 
+              revision: '{{ metadata.labels.vertexinc.com/revision }}'
+              files:
+                - path: "clusters/{{ name }}/managed-services/*/config.yaml"
+  template:
+    metadata:
+      name: "{{ path.basename }}-{{ name }}"
+      labels:
+        app.kubernetes.io/name: "{{ path.basename }}-{{ name }}"
+      namespace: argocd
+    spec:
+      ignoreDifferences:
+        - group: argoproj.io
+          jsonPointers:
+            - /status
+          kind: Application
+      project: managed-services
+      destination:
+        server: "{{ server }}"
+        namespace: "{{ path.basename }}"
+      source: 
+        chart: metrics-server
+        repoURL: https://kubernetes-sigs.github.io/metrics-server/
+        targetRevision: "{{ chartVersion }}"
+        helm:
+          releaseName: metrics-server
+          values: |-
+            image:
+              pullPolicy: Always
+            podSecurityContext:
+              fsGroup: 1000
+            securityContext:
+              capabilities:
+                drop: [ALL]
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              allowPrivilegeEscalation: false
+              runAsUser: 1000
+            resources:
+              limits:
+                cpu: 200m
+                memory: 256Mi
+              requests:
+                cpu: 100m
+                memory: 70Mi
+            hostNetwork:
+              enabled: false
+          syncPolicy:
+            automated:
+              prune: true
+              allowEmpty: true
+              selfHeal: true
+            syncOptions:
+              - CreateNamespace=true
