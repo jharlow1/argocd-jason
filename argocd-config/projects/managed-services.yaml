@@ -1,0 +1,56 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: managed-services
+  labels:
+    app.kubernetes.io/name: managed-services
+spec:
+  description: Service applications managed by CNE
+  sourceRepos:
+    - https://stefanprodan.github.io/podinfo
+    - https://kubernetes-sigs.github.io/external-dns/*
+    - https://kubernetes-sigs.github.io/metrics-server/*
+    - https://aws.github.io/eks-charts
+    - https://charts.external-secrets.io
+    - https://charts.fairwinds.com/stable
+    - https://stakater.github.io/stakater-charts
+    - https://aquasecurity.github.io/helm-charts
+    - https://storage.googleapis.com/solo-public-helm
+    - https://charts.jetstack.io
+  destinations:
+    - namespace: "aws-load-balancer-controller"
+      server: "*"
+    - namespace: "external-dns"
+      server: "*"
+    - namespace: "external-secrets"
+      server: "*"
+    - namespace: "gloo-system"
+      server: "*"
+    - namespace: "insights-agent"
+      server: "*"
+    - namespace: "kube-system"
+      server: "*"
+    - namespace: "metrics-server"
+      server: "*"
+    - namespace: "podinfo*"
+      server: "*"
+    - namespace: "polaris"
+      server: "*"
+    - namespace: "reloader"
+      server: "*"
+    - namespace: "trivy-system"
+      server: "*"
+    - namespace: "cert-manager"
+      server: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+#  roles:
+#    - name: managed-services
+#      description: Team access to own managed-services
+#      policies:
+#        - p, proj:managed-services:managed-services, applications, *, managed-services/*, allow
+#        - p, proj:managed-services:managed-services, exec, create, managed-services/*, deny
+#      groups:
+#        - CSETools_Admin
+#        - CSETools_EKS

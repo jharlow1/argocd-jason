@@ -1,0 +1,38 @@
+# Global RBAC configurations.  These RBAC rules are configured & apply to 
+# ALL projects.  Only high-level RBAC rules should be defined here & each
+# project should define it's own team-specific RBAC rules (eg, defining a 
+# role that's linked to an ActiveDirectory group & the permissions that role
+# will have in that specific project).)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  labels:
+    app.kubernetes.io/name: argocd-rbac-cm
+data:
+  policy.csv: |
+    p, automation-ro, applications, get, *, allow
+
+    ################################################################################
+    # Administrators
+    ################################################################################
+    g, "CSETools_Admin", role:sys-admin
+    p, role:sys-admin, applications, *, */*, allow
+    p, role:sys-admin, clusters, *, *, allow
+    p, role:sys-admin, projects, *, *, allow
+    p, role:sys-admin, certificates, *, *, allow
+    p, role:sys-admin, accounts, *, *, allow
+    p, role:sys-admin, gpgkeys, *, *, allow
+    p, role:eks-admin, exec, create, */*, allow
+
+    ################################################################################
+    # EKS Administrators
+    ################################################################################
+    g, "CSETools_EKS", role:eks-admin
+    p, role:eks-admin, applications, *, */*, allow
+    p, role:eks-admin, clusters, *, *, allow
+    p, role:eks-admin, projects, *, *, allow
+    p, role:eks-admin, certificates, *, *, allow
+    p, role:eks-admin, accounts, *, *, allow
+    p, role:eks-admin, gpgkeys, *, *, allow
+    p, role:eks-admin, exec, create, */*, allow
