@@ -12,5 +12,4 @@ commonAnnotations:
   argocd.argoproj.io/sync-wave: "1"
 
 resources:
-  - system-core.yaml
   - managed-services.yaml
