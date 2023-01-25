@@ -28,7 +28,7 @@ spec:
         namespace: "reloader"
       source: 
         repoURL: https://github.com/jharlow1/argocd-jason.git
-        path: umbrella-reloader
+        path: charts/umbrella-reloader
         targetRevision: "{{ metadata.labels.vertexinc.com/revision }}"
         helm:
           valueFiles:
