@@ -16,7 +16,7 @@ spec:
               repoURL: https://github.com/jharlow1/argocd-jason.git 
               revision: '{{ metadata.labels.vertexinc.com/revision }}'
               files:
-                - path: "clusters/{{ name }}/managed-services/metrics-server/config.yaml"
+                - path: "clusters/{{ name }}/metrics-server/config.yaml"
   template:
     metadata:
       name: "{{ path.basename }}-{{ name }}"
