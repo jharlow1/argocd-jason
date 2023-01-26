@@ -6,15 +6,22 @@ metadata:
     templateType: managed-service
 spec:
   generators:
-    - clusters:
-        selector:
-          matchLabels:
-            vertexinc.com/cluster_version: "3"
+    - matrix:
+        generators:
+        - clusters:
+            selector:
+              matchLabels:
+                      argocd.argoproj.io/secret-type: cluster
+        - git: 
+            repoURL: https://github.com/jharlow1/argocd-jason.git 
+            revision: '{{ metadata.labels.vertexinc.com/revision }}'
+            files:
+              - path: "clusters/{{ name }}/managed-services/reloader/config.yaml"
   template:
     metadata:
-      name: "reloader-{{ name }}"
+      name: "{{ path.basename }}-{{ name }}"
       labels:
-        app.kubernetes.io/name: "reloader-{{ name }}"
+        app.kubernetes.io/name: "{{ path.basename }}-{{ name }}"
       namespace: argocd
     spec:
       ignoreDifferences:
@@ -25,16 +32,40 @@ spec:
       project: managed-services
       destination:
         server: "{{ server }}"
-        namespace: "reloader"
+        namespace: "{{ path.basename }}"
       source: 
-        repoURL: "{{ metadata.annotations.vertexinc.com/argocd-config-repo }}"
-        path: charts/umbrella-reloader
-        targetRevision: "{{ metadata.labels.vertexinc.com/revision }}"
+        chart: reloader
+        repoURL: https://stakater.github.io/stakater-charts
+        targetRevision: "{{ chartVersion }}"
         helm:
-          valueFiles:
-            - values.yaml
-            - values-{{ name }}.yaml
-          ignoreMissingValueFiles: true
+          releaseName: reloader
+          values: |-
+            reloader:
+              enableHA: true
+              readOnlyRootFileSystem: true
+              deployment:
+                replicas: 2
+                securityContext:
+                  runAsUser: 1000
+                  runAsNonRoot: true
+                containerSecurityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  capabilities:
+                    drop:
+                      - ALL
+                image:
+                  pullPolicy: Always
+                livenessProbe:
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+                  periodSeconds: 10
+                  successThreshold: 1
+                readinessProbe:
+                  timeoutSeconds: 15
+                  failureThreshold: 5
+                  periodSeconds: 10
+                  successThreshold: 1
       syncPolicy:
         automated:
           prune: true

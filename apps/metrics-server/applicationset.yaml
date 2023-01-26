@@ -2,17 +2,26 @@ apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
   name: metrics-server
+  labels:
+    templateType: managed-service
 spec:
   generators:
-    - clusters:
-        selector:
-          matchLabels:
-            vertexinc.com/cluster_version: "3"
+    - matrix:
+        generators:
+          - clusters:
+              selector:
+                matchLabels:
+                  argocd.argoproj.io/secret-type: cluster
+          - git: 
+              repoURL: https://github.com/jharlow1/argocd-jason.git 
+              revision: '{{ metadata.labels.vertexinc.com/revision }}'
+              files:
+                - path: "clusters/{{ name }}/managed-services/metrics-server/config.yaml"
   template:
     metadata:
-      name: "metrics-server-{{ name }}"
+      name: "{{ path.basename }}-{{ name }}"
       labels:
-        app.kubernetes.io/name: "metrics-server-{{ name }}"
+        app.kubernetes.io/name: "{{ path.basename }}-{{ name }}"
       namespace: argocd
     spec:
       ignoreDifferences:
@@ -23,16 +32,34 @@ spec:
       project: managed-services
       destination:
         server: "{{ server }}"
-        namespace: "metrics-server"
+        namespace: "{{ path.basename }}"
       source: 
-        repoURL: "{{ metadata.annotations.vertexinc.com/argocd-config-repo }}"
-        targetRevision: "{{ metadata.labels.vertexinc.com/revision }}"
-        path: charts/umbrella-metrics-server
+        chart: metrics-server
+        repoURL: https://kubernetes-sigs.github.io/metrics-server/
+        targetRevision: "{{ chartVersion }}"
         helm:
-          valueFiles:
-            - values.yaml
-            - values-{{ name }}.yaml
-          ignoreMissingValueFiles: true
+          releaseName: metrics-server
+          values: |-
+            image:
+              pullPolicy: Always
+            podSecurityContext:
+              fsGroup: 1000
+            securityContext:
+              capabilities:
+                drop: [ALL]
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              allowPrivilegeEscalation: false
+              runAsUser: 1000
+            resources:
+              limits:
+                cpu: 200m
+                memory: 256Mi
+              requests:
+                cpu: 100m
+                memory: 70Mi
+            hostNetwork:
+              enabled: false
       syncPolicy:
         automated:
           prune: true
