@@ -1,4 +1,4 @@
-external_dns:
+external-dns:
   serviceAccount:
     annotations:
       eks.amazonaws.com/role-arn: arn:aws:iam::149745434630:role/cne-dev-jhv3-green-external-dns-irsa

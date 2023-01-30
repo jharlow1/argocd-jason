@@ -1,4 +1,4 @@
-external_dns:
+external-dns:
   replicas: 2
   serviceAccount:
     create: true
