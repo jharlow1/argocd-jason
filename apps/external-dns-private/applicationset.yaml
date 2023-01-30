@@ -23,7 +23,7 @@ spec:
       project: managed-services
       destination:
         server: "{{ server }}"
-        namespace: "external-dns-private"
+        namespace: "external-dns"
       source: 
         repoURL: "{{ metadata.annotations.vertexinc.com/argocd-config-repo }}"
         targetRevision: "{{ metadata.labels.vertexinc.com/revision }}"
