@@ -34,7 +34,7 @@ spec:
         server: "{{ server }}"
         namespace: argocd
       source:
-        repoURL: "{{ metadata.annotations.vertexinc.com/argocd_config_repo }}"
+        repoURL: "{{ metadata.annotations.vertexinc.com/argocd-config-repo }}"
         targetRevision: "{{ metadata.labels.vertexinc.com/revision }}"
         path: charts/managed-services
         helm:
