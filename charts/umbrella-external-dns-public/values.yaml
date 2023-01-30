@@ -1,0 +1,29 @@
+external-dns:
+  replicas: 2
+  serviceAccount:
+    create: true
+  image:
+    pullPolicy: Always
+  resources:
+    limits:
+      cpu: 50m
+      memory: 50Mi
+    requests:
+      cpu: 20m
+      memory: 50Mi
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+    runAsUser: 1000
+  podSecurityContext:
+    fsGroup: 1000
+  securityContext:
+    capabilities:
+      drop: [ALL]
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    runAsUser: 1000
+  registry: noop

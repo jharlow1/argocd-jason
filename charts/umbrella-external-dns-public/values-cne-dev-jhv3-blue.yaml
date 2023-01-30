@@ -1,0 +1,11 @@
+external-dns:
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::149745434630:role/cne-dev-jhv3-blue-external-dns-irsa
+  extraArgs:
+    - '--annotation-filter=vertexinc.com/dns-zone in (public)'
+    - '--aws-zone-type=public'
+    - '--zone-id-filter=Z08184601O5OATBQ4DFZ3'
+    - '--zone-id-filter=Z04477001GYH8LWNDONT9'
+  zoneNameFilters:
+    - platdev.vtxdev.net

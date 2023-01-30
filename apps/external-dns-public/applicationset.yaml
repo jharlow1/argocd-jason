@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: external-dns-public
+spec:
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            vertexinc.com/cluster_version: "3"
+  template:
+    metadata:
+      name: "external-dns-public-{{ name }}"
+      labels:
+        app.kubernetes.io/name: "external-dns-public-{{ name }}"
+      namespace: argocd
+    spec:
+      ignoreDifferences:
+        - group: argoproj.io
+          jsonPointers:
+            - /status
+          kind: Application
+      project: managed-services
+      destination:
+        server: "{{ server }}"
+        namespace: "external-dns"
+      source: 
+        repoURL: "{{ metadata.annotations.vertexinc.com/argocd-config-repo }}"
+        targetRevision: "{{ metadata.labels.vertexinc.com/revision }}"
+        path: charts/umbrella-external-dns-public
+        helm:
+          valueFiles:
+            - values.yaml
+            - values-{{ name }}.yaml
+          ignoreMissingValueFiles: true
+      syncPolicy:
+        automated:
+          prune: true
+          allowEmpty: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

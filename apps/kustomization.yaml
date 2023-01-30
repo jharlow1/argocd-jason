@@ -23,3 +23,4 @@ resources:
   - metrics-server
   - reloader
   - external-dns-private
+  - external-dns-public
