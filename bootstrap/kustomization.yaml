@@ -4,4 +4,4 @@ kind: Kustomization
 
 resources:
   - argocd-config.yaml
-  - ../apps
+  - ../projects

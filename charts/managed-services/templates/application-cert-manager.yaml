@@ -1,0 +1,79 @@
+{{- if .Values.certManager.enabled -}}
+apiVersion: argoproj.io/v1alpha1 
+kind: Application 
+metadata:
+  name: 'cert-manager-{{ .Values.cluster }}'
+  namespace: {{ .Values.argocd.namespace }}
+  labels:
+    {{- include "commonLabels" . | nindent 4 }}
+  annotations:
+    {{- include "commonAnnotations" . | nindent 4 }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: {{ .Values.argocd.project }}
+  destination:
+    namespace: {{ .Values.certManager.namespace }}
+    server: {{ .Values.argocd.destServer }}
+  ignoreDifferences:
+    {{- toYaml .Values.argocd.ignoreDifferences | nindent 4 }}
+    {{- if .Values.certManager.ignoreDifferences }}
+    {{- toYaml .Values.certManager.ignoreDifferences | nindent 4 }}
+    {{- end }}
+  source: 
+    chart: cert-manager
+    repoURL: https://charts.jetstack.io
+    targetRevision: {{ .Values.certManager.targetRevision }}
+    helm:
+      releaseName: cert-manager
+      values: |-
+        installCRDs: true
+        replicaCount: {{ .Values.certManager.replicas }}
+        image:
+          pullPolicy: Always
+        extraArgs:
+          - --dns01-recursive-nameservers=8.8.8.8:53
+        containerSecurityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+        securityContext:
+          fsGroup: 1001
+        serviceAccount:
+          annotations:
+            "eks.amazonaws.com/role-arn": arn:aws:iam::{{ .Values.account }}:role/{{ .Values.cluster }}-cert-manager-irsa
+        prometheus:
+          enabled: false
+        webhook:
+          replicaCount: {{ .Values.certManager.webhook.replicas }}
+          containerSecurityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+          image:
+            pullPolicy: Always
+        cainjector:
+          enabled: {{ .Values.certManager.cainjector.enabled }}
+          replicaCount: {{ .Values.certManager.cainjector.replicas }}
+          containerSecurityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+          image:
+            pullPolicy: Always
+        startupapicheck:
+          enabled: {{ .Values.certManager.startupapicheck.enabled }}
+          containerSecurityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+          image:
+            pullPolicy: Always          
+        resources:
+          {{- toYaml .Values.certManager.resources | nindent 10 }}
+        {{- with .Values.certManager.values }}
+        {{- . | nindent 8 }}
+        {{- end }}
+  syncPolicy: 
+    {{- toYaml .Values.argocd.defaultSyncPolicy | nindent 4 }}
+    {{- if .Values.metricsServer.syncPolicy }}
+    {{- toYaml .Values.metricsServer.syncPolicy | nindent 4 }}
+    {{- end }}
+{{- end -}}
+

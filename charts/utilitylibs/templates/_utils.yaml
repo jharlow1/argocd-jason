@@ -1,0 +1,185 @@
+{{/*
+Configure standard set of AWS load-balancer controller annotations for Ingress 
+objects.  
+
+This template requires two inputs:
+
+  - root - Contains the complete values scope
+  - component - Values scoped to a specific application section
+
+Usage:
+
+  {{ include "commonIngressAnnotations" (dict "root" .Values "component" .Values.myapp }}
+
+*/}}
+{{- define "commonIngressAnnotations" -}}
+alb.ingress.kubernetes.io/certificate-arn: {{ include "sslCertArn" (dict "root" .root "component" .component) }}
+alb.ingress.kubernetes.io/group.name: {{ include "elbGroupName" (dict "root" .root "component" .component) }}
+alb.ingress.kubernetes.io/healthcheck-path: {{ .component.healthCheckPath | default "/health" }}
+alb.ingress.kubernetes.io/inbound-cidrs: {{ include "inboundCidrs" (dict "root" .root "component" .component) }}
+alb.ingress.kubernetes.io/listen-ports: {{ .component.listenPort | default "'[{\"HTTPS\":443}]'" }}
+alb.ingress.kubernetes.io/load-balancer-attributes: 'access_logs.s3.enabled=true,access_logs.s3.bucket=vtx-logs-lb-{{ .root.region }}'
+alb.ingress.kubernetes.io/scheme: {{ .component.exposure }}
+alb.ingress.kubernetes.io/ssl-policy: {{ .root.sslPolicy | default "ELBSecurityPolicy-TLS-1-2-Ext-2018-06" }}
+alb.ingress.kubernetes.io/tags: >-
+  Monitoring=Enabled,Environment={{ .root.environment | title }},Stack={{ .root.stack | title }},Region={{ .root.region }},alb.ingress.kubernetes.io/scheme={{ .component.exposure }}
+alb.ingress.kubernetes.io/wafv2-acl-arn: {{ .root.wafv2AclArn }}
+{{- end -}}
+
+{{/*
+Generates a compiled set of Ingress annotations for configuring the AWS load-balancer
+controller.  Custom annotations defined in an application sub-section values are
+merged with the standard, default annotations in the "commonIngressAnnotations" 
+template.  
+
+This template requires two inputs:
+
+  - root - Contains the complete values scope
+  - component - Values scoped to a specific application section
+
+Usage:
+
+  {{ include "compiledIngressAnnotations" (dict "root" .Values "component" .Values.myapp }}
+
+*/}}
+{{- define "compiledIngressAnnotations" -}}
+{{- $common := fromYaml (include "commonIngressAnnotations" (dict "root" .root "component" .component)) -}}
+{{- $custom := fromYaml .component.ingressAnnotationOverrides -}}
+{{- toYaml (merge $custom $common) -}}
+{{- end -}}
+
+{{/*
+Generates common labels to be applied to manifests. 
+*/}}
+{{- define "commonLabels" -}}
+app.kubernetes.io/instance: argocd 
+app.kubernetes.io/part-of: argocd 
+app.kubernetes.io/managed-by: argocd 
+vertexinc.com/created_using: argocd
+vertexinc.com/environment: {{ .Values.environment }}
+vertexinc.com/region: {{ .Values.region }}
+vertexinc.com/stack: {{ .Values.stack }}
+vertexinc.com/cluster: {{ .Values.cluster }}
+vertexinc.com/cloud: {{ .Values.cloudProvider }}
+{{- end -}}
+
+{{/*
+Generates common annotations to be applied to manifests.
+*/}}
+{{- define "commonAnnotations" -}}
+vertexinc.com/owner: CSECloudNativeEngineering@vertexinc.com 
+vertexinc.com/product: Cloud Engineering
+vertexinc.com/source-code: https://github.com/vertexinc/cne-k8s-argocd-system
+{{- end -}}
+
+{{/*
+Lookup & return the appropriate SSL Certificate ARN from the .Values.sslCertArns
+value.
+
+This template requires two inputs:
+
+  - root - Contains the complete values scope
+  - component - Values scoped to a specific application section
+
+Usage:
+
+  {{ include "sslCertArn" (dict "root" .Values "component" .Values.myapp }}
+
+*/}}
+{{- define "sslCertArn" -}}
+{{- $sslArns := fromJson (.root.sslCertArns | replace "'" "") -}}
+{{- $domain := or .component.domainName .root.defaultDomain -}}
+{{- get $sslArns $domain -}}
+{{- end -}}
+
+{{/*
+Generate a friendly hostname for a given service including the cluster environment
+& domain but excluding the "stack" value ("-blue"/"-green").
+
+This template requires two inputs:
+
+  - root - Contains the complete values scope
+  - component - Values scoped to a specific application section
+
+Usage:
+
+  {{ include "serviceHostname" (dict "root" .Values "component" .Values.myapp }}
+
+*/}}
+{{- define "serviceHostname" -}}
+{{- $domain := or .component.domainName .root.defaultDomain -}}
+{{- $shortEnv := .root.shortEnv -}}
+{{- $svcName := .name -}}
+{{- printf "%s-%s.%s" $svcName $shortEnv $domain -}}
+{{- end -}}
+
+{{/*
+Generate an ELB group name with optional prefix.  Group name will take the following
+format:
+
+  <cluster>-<stack>-[<groupIdentifier>-]<exposure>
+
+This template requires two inputs:
+
+  - root - Contains the complete values scope
+  - component - Values scoped to a specific application section
+
+Usage:
+
+  {{ include "elbGroupName" (dict "root" .Values "component" .Values.myapp }}
+
+*/}}
+{{- define "elbGroupName" -}}
+{{- $grpName := list .root.cluster .component.groupIdentifier .component.exposure -}}
+{{- join "-" $grpName -}}
+{{- end -}}
+
+{{/*
+Returns a comma-separated list of CIDRs for use in the `inbound-cidrs` annotation
+for ELB configuration.
+
+This template requires two inputs:
+
+  - root - Contains the complete values scope
+  - component - Values scoped to a specific application section
+
+Usage:
+
+  {{ include "inboundCidrs" (dict "root" .Values "component" .Values.myapp }}
+
+*/}}
+{{- define "inboundCidrs" -}}
+{{- if .component.inboundCidrs -}}
+{{- printf "%s" .component.inboundCidrs -}}
+{{- else if eq .component.exposure "internal" -}}
+{{- printf "%s" .root.internalInboundCidrs -}}
+{{- else -}}
+{{- printf "%s" "0.0.0.0/0" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Returns a comma-separated list of CIDRs for use in the `inbound-cidrs` annotation
+for ELB configuration.
+
+This template requires two inputs:
+
+  - svcName - service name to prefix the initial hostname record with
+  - root - Contains the complete values scope
+  - component - Values scoped to a specific application section
+
+Usage:
+
+  {{ include "externalDnsHostnames" (dict "root" .Values "component" .Values.myapp "svcName" "myapp") }}
+
+*/}}
+{{- define "externalDnsHostnames" -}}
+{{- $hostnames := list (printf "%s-%s-%s-%s.%s" .svcName .component.exposure .root.shortName .root.stack .root.defaultDomain) -}}
+{{- range .component.dnsHostnames -}}
+{{- $hostnames = append $hostnames (printf "%s-%s-%s.%s" . $.root.shortName $.root.stack $.root.defaultDomain) -}}
+{{- end -}}
+{{- range .component.dnsCustFQDNs -}}
+{{- $hostnames = append $hostnames . -}}
+{{- end -}}
+{{- join "," $hostnames -}}
+{{- end -}}

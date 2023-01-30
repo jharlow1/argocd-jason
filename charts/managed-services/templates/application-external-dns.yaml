@@ -1,0 +1,86 @@
+{{- if .Values.externalDns.enabled -}}
+{{- $publicDnsZoneIds := values (fromJson (.Values.publicDnsZones | replace "'" "")) -}}
+{{- $privateDnsZoneIds := values (fromJson (.Values.privateDnsZones | replace "'" "")) -}}
+{{- range $exposure := list "public" "private" }}
+---
+apiVersion: argoproj.io/v1alpha1 
+kind: Application 
+metadata:
+  name: 'external-dns-{{ $exposure }}-{{ $.Values.cluster }}'
+  namespace: {{ $.Values.argocd.namespace }}
+  labels:
+    {{- include "commonLabels" $ | nindent 4 }}
+  annotations:
+    {{- include "commonAnnotations" $ | nindent 4 }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: {{ $.Values.argocd.project }}
+  destination:
+    namespace: {{ $.Values.externalDns.namespace }}
+    server: {{ $.Values.argocd.destServer }}
+  ignoreDifferences:
+    {{- toYaml $.Values.argocd.ignoreDifferences | nindent 4 }}
+    {{- if $.Values.externalDns.ignoreDifferences }}
+    {{- toYaml $.Values.externalDns.ignoreDifferences | nindent 4 }}
+    {{- end }}
+  source: 
+    chart: external-dns
+    repoURL: https://kubernetes-sigs.github.io/external-dns/
+    targetRevision: {{ $.Values.externalDns.targetRevision }}
+    helm: 
+      releaseName: external-dns-{{ $exposure }}
+      values: |-
+        replicas: {{ $.Values.externalDns.replicas }}
+        serviceAccount:
+          create: true 
+          annotations:
+            eks.amazonaws.com/role-arn: arn:aws:iam::{{ $.Values.account }}:role/{{ $.Values.cluster }}-external-dns-irsa
+        image:
+          pullPolicy: Always
+        resources:
+          {{- toYaml $.Values.externalDns.resources | nindent 10 }}
+        containerSecurityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+          runAsUser: 1000
+        podSecurityContext:
+          fsGroup: 1000
+        securityContext:
+          capabilities:
+            drop: [ALL]
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
+        extraArgs:
+          - '--annotation-filter=vertexinc.com/dns-zone in ({{ $exposure }})'
+          - '--aws-zone-type={{ $exposure }}'
+          {{- if eq $exposure "public" }}
+          {{- range $publicDnsZoneIds }}
+          - '--zone-id-filter={{ . }}'
+          {{- end }}
+          {{- else -}}
+          {{- range $privateDnsZoneIds }}
+          - '--zone-id-filter={{ . }}'
+          {{- end }}
+          {{- end }}
+        registry: noop
+        {{- if $.Values.externalDns.nameFilters }}
+        zoneNameFilters:
+        {{- range $.Values.externalDns.nameFilters }}
+          - {{ . }}
+        {{- end }}
+        {{- end }}
+        {{- with $.Values.externalDns.values }}
+          {{- . | nindent 10 }}
+        {{- end }}
+  syncPolicy:
+    {{- toYaml $.Values.argocd.defaultSyncPolicy | nindent 4 }}
+    {{- if $.Values.externalDns.syncPolicy }}
+    {{- toYaml $.Values.externalDns.syncPolicy | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}

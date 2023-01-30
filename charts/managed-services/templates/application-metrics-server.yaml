@@ -1,0 +1,54 @@
+{{- if .Values.metricsServer.enabled -}}
+apiVersion: argoproj.io/v1alpha1 
+kind: Application 
+metadata:
+  name: 'metrics-server-{{ .Values.cluster }}'
+  namespace: {{ .Values.argocd.namespace }}
+  labels:
+    {{- include "commonLabels" . | nindent 4 }}
+  annotations:
+    {{- include "commonAnnotations" . | nindent 4 }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: {{ .Values.argocd.project }}
+  destination:
+    namespace: {{ .Values.metricsServer.namespace }}
+    server: {{ .Values.argocd.destServer }}
+  ignoreDifferences:
+    {{- toYaml .Values.argocd.ignoreDifferences | nindent 4 }}
+    {{- if .Values.metricsServer.ignoreDifferences }}
+    {{- toYaml .Values.metricsServer.ignoreDifferences | nindent 4 }}
+    {{- end }}
+  source: 
+    chart: metrics-server
+    repoURL: https://kubernetes-sigs.github.io/metrics-server/
+    targetRevision: {{ .Values.metricsServer.targetRevision }}
+    helm:
+      releaseName: metrics-server
+      values: |-
+        image:
+          pullPolicy: Always
+        podSecurityContext:
+          fsGroup: 1000
+        securityContext:
+          capabilities:
+            drop: [ALL]
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          runAsUser: 1000
+        resources:
+          {{- toYaml .Values.metricsServer.resources | nindent 10 }}
+        hostNetwork:
+          enabled: {{ .Values.metricsServer.hostNetwork }}
+        {{- with .Values.metricsServer.values }}
+        {{- . | nindent 8 }}
+        {{- end }}
+  syncPolicy: 
+    {{- toYaml .Values.argocd.defaultSyncPolicy | nindent 4 }}
+    {{- if .Values.metricsServer.syncPolicy }}
+    {{- toYaml .Values.metricsServer.syncPolicy | nindent 4 }}
+    {{- end }}
+{{- end -}}
+

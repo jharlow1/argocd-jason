@@ -1,0 +1,42 @@
+{{- if .Values.trivy.enabled -}}
+apiVersion: argoproj.io/v1alpha1 
+kind: Application 
+metadata:
+  name: 'trivy-{{ .Values.cluster }}'
+  namespace: {{ .Values.argocd.namespace }}
+  labels:
+    {{- include "commonLabels" . | nindent 4 }}
+  annotations:
+    {{- include "commonAnnotations" . | nindent 4 }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: {{ .Values.argocd.project }}
+  destination:
+    namespace: {{ .Values.trivy.namespace }}
+    server: {{ .Values.argocd.destServer }}
+  ignoreDifferences:
+    {{- toYaml .Values.argocd.ignoreDifferences | nindent 4 }}
+    {{- if .Values.trivy.ignoreDifferences }}
+    {{- toYaml .Values.trivy.ignoreDifferences | nindent 4 }}
+    {{- end }}
+  source: 
+    chart: trivy-operator
+    repoURL: https://aquasecurity.github.io/helm-charts
+    targetRevision: {{ .Values.trivy.targetRevision }}
+    helm:
+      releaseName: trivy-operator
+      values: |-
+        replicaCount: {{ .Values.trivy.replicas }}
+        trivy:
+          ignoreUnfixed: true
+        {{- with .Values.trivy.values }}
+        {{- . | nindent 6 }}
+        {{- end }}
+  syncPolicy: 
+    {{- toYaml .Values.argocd.defaultSyncPolicy | nindent 4 }}
+    {{- if .Values.trivy.syncPolicy }}
+    {{- toYaml .Values.trivy.syncPolicy | nindent 4 }}
+    {{- end }}
+{{- end -}}
+

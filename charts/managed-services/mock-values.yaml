@@ -1,0 +1,57 @@
+cluster: cne-dev-blue
+argocd:
+  namespace: argocd
+  project: managed-services
+  destServer: https://kubernetes.default.svc
+  ignoreDifferences:
+    - group: argoproj.io
+      jsonPointers:
+        - /status
+      kind: Application
+  defaultSyncPolicy:
+    automated:
+      allowEmpty: true
+      prune: true
+      selfHeal: true
+cloudProvider: aws 
+kubernetesProvider: eks
+region: us-west-2
+stack: blue
+environment: development
+shortEnv: dev
+account: ABC123456789
+owner: CSE-CloudNativeEngineering@vertexinc.com
+product: Cloud Engineering
+project: cne
+sourceCode: https://github.com/vertexinc/cne-k8s-argocd-system
+documentation: https://vertexinc.atlassian.net/wiki/spaces/CE/pages/3246293221/Cloud+Native+Engineering
+defaultDomain: platdev.vtxdev.net
+sslCertArns: >-
+  '{"platdev.vtxdev.net":"arn:aws:acm:us-west-2:1234567890:certificate/abcdefg0987654321"}'
+internalInboundCidrs: >-
+  10.7.0.0/20, 172.26.12.0/22, 172.28.212.0/22, 100.64.96.0/21, 172.28.216.0/22
+wafv2AclArn: >-
+  arn:aws:wafv2:us-west-2:1234567890:regional/webacl/VTX-CommonRuleSet/abcdefg0987654321
+vpc: vpc-09a37a7d46fa079f5
+publicDnsZones: >-
+  '{"dev.vx3cloud.com":"Z08184601O5OATBQ4DFZ3","platdev.vtxdev.net":"Z04477001GYH8LWNDONT9"}'
+privateDnsZones: >-
+  '{"dev.vx3cloud.com":"Z09555521T6TE5WXR2IX0","platdev.vtxdev.net":"Z0243034EFQ5QGU0UOPJ"}'
+
+externalDns:
+  enabled: true
+
+awsLoadBalancerController:
+  enabled: true
+
+externalSecrets:
+  enabled: true
+
+metricsServer:
+  enabled: true
+
+polaris:
+  enabled: true
+
+reloader:
+  enabled: true

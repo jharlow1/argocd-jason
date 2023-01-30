@@ -1,0 +1,67 @@
+{{- if .Values.reloader.enabled -}}
+apiVersion: argoproj.io/v1alpha1 
+kind: Application 
+metadata:
+  name: 'reloader-{{ .Values.cluster }}'
+  namespace: {{ .Values.argocd.namespace }}
+  labels:
+    {{- include "commonLabels" . | nindent 4 }}
+  annotations:
+    {{- include "commonAnnotations" . | nindent 4 }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: {{ .Values.argocd.project }}
+  destination:
+    namespace: {{ .Values.reloader.namespace }}
+    server: {{ .Values.argocd.destServer }}
+  ignoreDifferences:
+    {{- toYaml .Values.argocd.ignoreDifferences | nindent 4 }}
+    {{- if .Values.reloader.ignoreDifferences }}
+    {{- toYaml .Values.reloader.ignoreDifferences | nindent 4 }}
+    {{- end }}
+  source: 
+    chart: reloader
+    repoURL: https://stakater.github.io/stakater-charts
+    targetRevision: {{ .Values.reloader.targetRevision }}
+    helm:
+      releaseName: reloader
+      values: |-
+        reloader:
+          enableHA: {{ if gt (int .Values.reloader.replicas) 1 -}}true{{- else -}}false{{- end }}
+          readOnlyRootFileSystem: true
+          deployment:
+            replicas: {{ .Values.reloader.replicas }}
+            securityContext:
+              runAsUser: 1000
+              runAsNonRoot: true
+            containerSecurityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+            image:
+              pullPolicy: Always
+            resources:
+            {{- toYaml .Values.reloader.resources | nindent 14 }}
+            livenessProbe:
+              timeoutSeconds: 5
+              failureThreshold: 5
+              periodSeconds: 10
+              successThreshold: 1
+            readinessProbe:
+              timeoutSeconds: 15
+              failureThreshold: 5
+              periodSeconds: 10
+              successThreshold: 1
+          {{- with .Values.reloader.values }}
+          {{- . | nindent 8 }}
+          {{- end }}
+  syncPolicy: 
+    {{- toYaml .Values.argocd.defaultSyncPolicy | nindent 4 }}
+    {{- if .Values.reloader.syncPolicy }}
+    {{- toYaml .Values.reloader.syncPolicy | nindent 4 }}
+    {{- end }}
+{{- end -}}
+

@@ -1,0 +1,602 @@
+{{- if .Values.polaris.enabled -}}
+apiVersion: argoproj.io/v1alpha1 
+kind: Application 
+metadata:
+  name: 'polaris-{{ .Values.cluster }}'
+  namespace: {{ .Values.argocd.namespace }}
+  labels:
+    {{- include "commonLabels" . | nindent 4 }}
+    {{- with .Values.polaris.labels -}}
+    {{ toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- include "commonAnnotations" . | nindent 4 }}
+    {{- with .Values.polaris.annotations -}}
+    {{ toYaml . | nindent 4 }}
+    {{- end }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: {{ .Values.argocd.project }}
+  destination:
+    namespace: {{ .Values.polaris.namespace }}
+    server: {{ .Values.argocd.destServer }}
+  ignoreDifferences:
+    {{- toYaml .Values.argocd.ignoreDifferences | nindent 4 }}
+    {{- if .Values.polaris.ignoreDifferences }}
+    {{- toYaml .Values.polaris.ignoreDifferences | nindent 4 }}
+    {{- end }}
+  source: 
+    chart: polaris
+    repoURL: https://charts.fairwinds.com/stable
+    targetRevision: {{ .Values.polaris.targetRevision }}
+    helm:
+      releaseName: polaris
+      values: |-
+        dashboard:
+          enable: {{ .Values.polaris.dashboard.enabled }}
+          logLevel: {{ .Values.polaris.dashboard.logLevel }}
+          resources:
+            {{- toYaml .Values.polaris.dashboard.resources | nindent 10 }}
+          replicas: {{ .Values.polaris.dashboard.replicas }}
+          service:
+            annotations:
+              vertexinc.com/dns-zone: private
+              external-dns.alpha.kubernetes.io/alias: 'true'
+              external-dns.alpha.kubernetes.io/aws-region: {{ .Values.region }}
+              external-dns.alpha.kubernetes.io/set-identifier: polaris-{{ .Values.shortEnv }}-{{ .Values.stack }}-{{ .Values.region }}
+              external-dns.alpha.kubernetes.io/hostname: custom-{{ include "serviceHostname" (dict "root" .Values "component" .Values.polaris "name" "polaris") }}
+        webhook:
+          enable: {{ .Values.polaris.webhook.enabled }}
+        config:
+          checks:
+            # reliability
+            deploymentMissingReplicas: warning
+            priorityClassNotSet: ignore
+            tagNotSpecified: danger
+            pullPolicyNotAlways: warning
+            readinessProbeMissing: warning
+            livenessProbeMissing: warning
+            metadataAndNameMismatched: ignore
+            pdbDisruptionsIsZero: warning
+            missingPodDisruptionBudget: ignore
+
+            # efficiency
+            cpuRequestsMissing: warning
+            cpuLimitsMissing: warning
+            memoryRequestsMissing: warning
+            memoryLimitsMissing: warning
+
+            # security
+            hostIPCSet: danger
+            hostPIDSet: danger
+            notReadOnlyRootFilesystem: warning
+            privilegeEscalationAllowed: danger
+            runAsRootAllowed: danger
+            runAsPrivileged: danger
+            dangerousCapabilities: danger
+            insecureCapabilities: warning
+            hostNetworkSet: danger
+            hostPortSet: warning
+            tlsSettingsMissing: warning
+            #restrictSourceSubnets: ignore
+
+            # UpgradeReadiness
+            reqStsRegionalFalseAnnotation: ignore
+            reqIngressClassName: ignore
+
+            # business
+            reqAnnotationsVertex: warning
+            reqLabelsCommon: warning
+
+
+          customChecks:
+            reqAnnotationsVertex:
+              successMessage: 'Vertex custom annotations are set'
+              failureMessage: 'Missing Vertex custom annotations vertexinc.com/owner, vertexinc.com/product, vertexinc.com/source-code'
+              category: Business
+              target: apps/Deployment
+              schema:
+                '$schema': http://json-schema.org/draft-07/schema
+                type: object
+                properties:
+                  metadata:
+                    type: object
+                    required:
+                      - annotations
+                    properties:
+                      annotations:
+                        type: object
+                        required:
+                          - vertexinc.com/owners
+                          - vertexinc.com/product
+                          - vertexinc.com/source-code
+                        allOf:
+                          - properties:
+                              vertexinc.com/owners:
+                                type: string
+                                pattern: ^(?i)([a-z0-9.-]+@vertexinc.com[, ]*)+$
+                          - properties:
+                              vertexinc.com/product:
+                                type: string
+                          - properties:
+                              vertexinc.com/source-code:
+                                type: string
+                                pattern: '^(?i)https?://.*$'
+            reqLabelsCommon:
+              successMessage: 'Common app.kubernetes.io labels are set'
+              failureMessage: 'Missing common app.kubernetes.io/name, app.kubernetes.io/version, app.kubernetes.io/component, app.kubernetes.io/managed-by'
+              category: Business
+              target: apps/Deployment
+              schema:
+                '$schema': http://json-schema.org/draft-07/schema
+                type: object
+                properties:
+                  metadata:
+                    type: object
+                    required:
+                      - labels
+                    properties:
+                      labels:
+                        type: object
+                        required:
+                          - app.kubernetes.io/name
+                          - app.kubernetes.io/version
+                          - app.kubernetes.io/component
+                          - app.kubernetes.io/managed-by
+                        properties:
+                          app.kubernetes.io/name:
+                            type: string
+                          app.kubernetes.io/version:
+                            type: string
+                          app.kubernetes.io/component:
+                            type: string
+                          app.kubernetes.io/managed-by:
+                            type: string
+            reqStsRegionalFalseAnnotation: 
+              successMessage: 'ServiceAccount has annotation for eks.amazonaws.com/sts-regional-endpoints: "false"'
+              failureMessage: 'ServiceAccount either has no annotation for sts-regional-endpoints or it is not set to false'
+              category: Business
+              target: ServiceAccount
+              schema:
+                '$schema': http://json-schema.org/draft-07/schema
+                type: object
+                properties:
+                  metadata:
+                    type: object
+                    required:
+                      - annotations
+                    properties:
+                      annotations:
+                        type: object
+                        required:
+                          - eks.amazonaws.com/sts-regional-endpoints
+                        properties:
+                          eks.amazonaws.com/sts-regional-endpoints:
+                            type: string
+                            pattern: '^(?i)false'
+            reqIngressClassName:
+              successMessage: 'Ingress has ingressClassName defined in ingress'
+              failureMessage: 'Ingress does not have ingressClassName defined in ingress'
+              category: Business
+              target: networking.k8s.io/Ingress
+              schema:
+                '$schema': http://json-schema.org/draft-07/schema
+                type: object
+                properties:
+                  spec:
+                    type: object
+                    required:
+                      - ingressClassName 
+                    properties:
+                      ingressClassName:
+                        type: string
+
+            #restrictSourceSubnets:
+            #  successMessage: Ingress annotations are OK
+            #  failureMessage: Internet-facing Ingress without source-ip restriction conditions
+            #  category: Reliability
+            #  target: networking.k8s.io/Ingress
+            #  schema:
+            #    '$schema': http://json-schema.org/draft-07/schema
+            #    type: object
+            #    required:
+            #    - metadata
+            #    properties:
+            #      metadata:
+            #        type: object
+            #        annotations:
+            #          type: object
+            #          oneOf:
+            #          - properties:
+            #              alb.ingress.kubernetes.io/group.name:
+            #                not:
+            #                  pattern: "*internet-facing"
+            #          - required: [{{ printf "\"alb.ingress.kubernetes.io/conditions.{{ .spec.rules.0.http.paths.0.backend.service.name }}\"" }}]
+
+          exemptions:
+            - controllerNames:
+                - argocd-dex-server
+                - argocd-notifications-controller
+                - argocd-applicationset-controller
+                - argocd-notifications-controller
+                - argocd-redis-ha-haproxy
+                - argocd-repo-server
+                - argocd-server
+                - aws-load-balancer-controller
+                - cloudhealth-cloudhealth-collector
+                - datadog-cluster-agent
+                - datadog-kube-state-metrics
+                - kube-ops-view
+                - kube-resource-report
+                - cluster-autoscaler-aws-cluster-autoscaler
+                - coredns
+                - efs-csi-controller
+                - external-dns
+                - external-secrets
+                - external-secrets-cert-controller
+                - external-secrets-webhook
+                - metrics-server
+                - stakater-reloader-reloader
+                - prometheus-msteams
+                - prometheus-stack-grafana
+                - prometheus-stack-kube-prom-operator
+                - prometheus-stack-kube-state-metrics
+                - polaris-dashboard
+                - rbac-manager
+                - reloader-reloader
+              rules:
+                - reqAnnotationsVertex
+
+            - controllerNames:
+                - efs-csi-controller
+              rules:
+                - reqLabelsCommon
+
+            - controllerNames:
+                - kube-resource-report
+                - external-secrets
+                - external-secrets-cert-controller
+                - external-secrets-webhook
+                - kube-ops-view
+                - argocd-notifications-controller
+                - prometheus-stack-kube-prom-operator
+                - prometheus-stack-grafana
+              rules:
+                - deploymentMissingReplicas
+                - readinessProbeMissing
+                - livenessProbeMissing
+
+            - namespace: amazon-cloudwatch
+              controllerNames:
+                - cloudwatch-agent
+                - fluent-bit
+              rules:
+                - hostNetworkSet
+                - runAsRootAllowed
+                - privilegeEscalationAllowed
+
+            - namespace: monitoring-${local.env_name}
+              controllerNames:
+                - prometheus-stack-prometheus-node-exporter
+              rules:
+                - hostNetworkSet
+                - hostPIDSet
+                - hostPortSet
+
+            - namespace: kube-system
+              controllerNames:
+                - kube-apiserver
+                - kube-proxy
+                - kube-scheduler
+                - etcd-manager-events
+                - kube-controller-manager
+                - kube-dns
+                - etcd-manager-main
+                - aws-load-balancer-controller
+              rules:
+                - hostPortSet
+                - hostNetworkSet
+                - readinessProbeMissing
+                - livenessProbeMissing
+                - cpuRequestsMissing
+                - cpuLimitsMissing
+                - memoryRequestsMissing
+                - memoryLimitsMissing
+                - runAsRootAllowed
+                - runAsPrivileged
+                - notReadOnlyRootFilesystem
+                - hostPIDSet
+                - reqAnnotationsVertex
+                - reqLabelsCommon
+
+            - controllerNames:
+                - kube-flannel-ds
+              rules:
+                - notReadOnlyRootFilesystem
+                - runAsRootAllowed
+                - notReadOnlyRootFilesystem
+                - readinessProbeMissing
+                - livenessProbeMissing
+                - cpuLimitsMissing
+
+            - controllerNames:
+                - cert-manager
+              rules:
+                - notReadOnlyRootFilesystem
+                - runAsRootAllowed
+                - readinessProbeMissing
+                - livenessProbeMissing
+
+            - controllerNames:
+                - cluster-autoscaler
+              rules:
+                - notReadOnlyRootFilesystem
+                - runAsRootAllowed
+                - readinessProbeMissing
+
+            - controllerNames:
+                - vpa
+              rules:
+                - runAsRootAllowed
+                - readinessProbeMissing
+                - livenessProbeMissing
+                - notReadOnlyRootFilesystem
+
+            - controllerNames:
+                - datadog
+              rules:
+                - runAsRootAllowed
+                - readinessProbeMissing
+                - livenessProbeMissing
+                - notReadOnlyRootFilesystem
+                - hostNetworkSet
+
+            - controllerNames:
+                - nginx-ingress-controller
+              rules:
+                - privilegeEscalationAllowed
+                - insecureCapabilities
+                - runAsRootAllowed
+
+            - controllerNames:
+                - dns-controller
+                - datadog-datadog
+                - kube-flannel-ds
+                - kube2iam
+                - aws-iam-authenticator
+                - datadog
+                - kube2iam
+              rules:
+                - hostNetworkSet
+
+            - controllerNames:
+                - aws-iam-authenticator
+                - aws-cluster-autoscaler
+                - kube-state-metrics
+                - dns-controller
+                - external-dns
+                - dnsmasq
+                - autoscaler
+                - kubernetes-dashboard
+                - install-cni
+                - kube2iam
+              rules:
+                - readinessProbeMissing
+                - livenessProbeMissing
+
+            - controllerNames:
+                - aws-iam-authenticator
+                - nginx-ingress-default-backend
+                - aws-cluster-autoscaler
+                - kube-state-metrics
+                - dns-controller
+                - external-dns
+                - kubedns
+                - dnsmasq
+                - autoscaler
+                - tiller
+                - kube2iam
+              rules:
+                - runAsRootAllowed
+
+            - controllerNames:
+                - aws-iam-authenticator
+                - nginx-ingress-controller
+                - nginx-ingress-default-backend
+                - aws-cluster-autoscaler
+                - kube-state-metrics
+                - dns-controller
+                - external-dns
+                - kubedns
+                - dnsmasq
+                - autoscaler
+                - tiller
+                - kube2iam
+              rules:
+                - notReadOnlyRootFilesystem
+
+            - controllerNames:
+                - cert-manager
+                - dns-controller
+                - kubedns
+                - dnsmasq
+                - autoscaler
+                - insights-agent-goldilocks-vpa-install
+                - datadog
+              rules:
+                - cpuRequestsMissing
+                - cpuLimitsMissing
+                - memoryRequestsMissing
+                - memoryLimitsMissing
+
+            - controllerNames:
+                - kube2iam
+                - kube-flannel-ds
+              rules:
+                - runAsPrivileged
+
+            - controllerNames:
+                - kube-hunter
+              rules:
+                - hostPIDSet
+
+            - controllerNames:
+                - polaris
+              rules:
+                - deploymentMissingReplicas
+
+            - controllerNames:
+                - polaris
+                - kube-hunter
+                - goldilocks
+                - insights-agent-goldilocks-vpa-install
+              rules:
+                - notReadOnlyRootFilesystem
+
+            - controllerNames:
+                - insights-agent-goldilocks-controller
+              rules:
+                - livenessProbeMissing
+                - readinessProbeMissing
+
+            - controllerNames:
+                - insights-agent-goldilocks-vpa-install
+                - kube-hunter
+              rules:
+                - runAsRootAllowed
+
+            - namespace: kube-system
+              controllerNames:
+                - metrics-server
+              rules:
+                - deploymentMissingReplicas
+                - cpuLimitsMissing
+                - memoryLimitsMissing
+
+            - controllerNames:
+                - argocd-dex-server
+                - external-dns
+                - datadog-cluster-agent
+                - datadog-kube-state-metrics
+                - prometheus-stack-kube-state-metrics
+              rules:
+                - deploymentMissingReplicas
+
+            - controllerNames:
+                - argocd-redis-ha-haproxy
+                - argocd-redis-ha-server
+              rules:
+                - privilegeEscalationAllowed
+                - notReadOnlyRootFilesystem
+                - pullPolicyNotAlways
+                - insecureCapabilities
+
+            - namespace: kube-system
+              controllerNames:
+                - aws-cloudwatch-metrics
+              rules:
+                - hostNetworkSet
+                - runAsRootAllowed
+                - privilegeEscalationAllowed
+                - readinessProbeMissing
+                - livenessProbeMissing
+                - insecureCapabilities
+                - notReadOnlyRootFilesystem
+
+            - controllerNames:
+                - cloudwatch-agent
+              rules:
+                - livenessProbeMissing
+                - readinessProbeMissing
+                - runAsRootAllowed
+                - notReadOnlyRootFilesystem
+
+            - controllerNames:
+                - fluent-bit
+              rules:
+                - runAsRootAllowed
+                - livenessProbeMissing
+                - readinessProbeMissing
+
+            - namespace: kube-system
+              controllerNames:
+                - efs-csi-node
+                - efs-csi-controller
+                - aws-node
+              rules:
+                - hostNetworkSet
+                - privilegeEscalationAllowed
+                - runAsRootAllowed
+                - insecureCapabilities
+                - notReadOnlyRootFilesystem
+                - runAsPrivileged
+                - cpuRequestsMissing
+                - cpuLimitsMissing
+                - livenessProbeMissing
+                - readinessProbeMissing
+                - memoryRequestsMissing
+                - memoryLimitsMissing
+                - hostPortSet
+                - pullPolicyNotAlways
+
+            - namespace: kube-system
+              controllerNames:
+                - aws-node
+              rules:
+                - dangerousCapabilities
+
+            - namespace: kube-system
+              controllerNames:
+                - kube-proxy
+              rules:
+                - privilegeEscalationAllowed
+                - pullPolicyNotAlways
+                - insecureCapabilities
+
+            - namespace: kube-system
+              controllerNames:
+                - coredns
+              rules:
+                - runAsRootAllowed
+                - cpuLimitsMissing
+                - pullPolicyNotAlways
+
+            - controllerNames:
+                - datadog-kube-state-metrics
+              rules:
+                - privilegeEscalationAllowed
+                - insecureCapabilities
+
+            - controllerNames:
+                - datadog
+              rules:
+                - hostPortSet
+                - privilegeEscalationAllowed
+                - insecureCapabilities
+
+            - namespace: monitoring-${local.env_name}
+              controllerNames:
+                - prometheus-msteams
+              rules:
+                - deploymentMissingReplicas
+                - privilegeEscalationAllowed
+                - insecureCapabilities
+                - notReadOnlyRootFilesystem
+
+            - controllerNames:
+                - cloudhealth-cloudhealth-collector
+              rules:
+                - reqAnnotationsVertex
+                - deploymentMissingReplicas
+                - readinessProbeMissing
+          {{- with .Values.polaris.values }}
+          {{- . | nindent 8 }}
+          {{- end }}
+  syncPolicy: 
+    {{- toYaml .Values.argocd.defaultSyncPolicy | nindent 4 }}
+    {{- if .Values.polaris.syncPolicy }}
+    {{- toYaml .Values.polaris.syncPolicy | nindent 4 }}
+    {{- end }}
+{{- end -}}
+

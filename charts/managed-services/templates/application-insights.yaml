@@ -1,0 +1,44 @@
+{{- if .Values.insights.enabled -}}
+apiVersion: argoproj.io/v1alpha1 
+kind: Application 
+metadata:
+  name: 'fairwinds-insights-{{ .Values.cluster }}'
+  namespace: {{ .Values.argocd.namespace }}
+  labels:
+    {{- include "commonLabels" . | nindent 4 }}
+  annotations:
+    {{- include "commonAnnotations" . | nindent 4 }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: {{ .Values.argocd.project }}
+  destination:
+    namespace: {{ .Values.insights.namespace }}
+    server: {{ .Values.argocd.destServer }}
+  ignoreDifferences:
+    {{- toYaml .Values.argocd.ignoreDifferences | nindent 4 }}
+    {{- if .Values.insights.ignoreDifferences }}
+    {{- toYaml .Values.insights.ignoreDifferences | nindent 4 }}
+    {{- end }}
+  source: 
+    chart: insights-agent
+    repoURL: https://charts.fairwinds.com/stable
+    targetRevision: {{ .Values.insights.targetRevision }}
+    helm:
+      releaseName: insights-agent
+      values: |-
+        insights:
+          organization: {{ .Values.insights.organization }}
+          cluster: {{ .Values.cluster }}
+          base64token: {{ .Values.insights.base64token }}
+          {{- toYaml .Values.insights.config | nindent 8 }}
+        {{- with .Values.metricsServer.values }}
+        {{- . | nindent 8 }}
+        {{- end }}
+  syncPolicy: 
+    {{- toYaml .Values.argocd.defaultSyncPolicy | nindent 4 }}
+    {{- if .Values.metricsServer.syncPolicy }}
+    {{- toYaml .Values.metricsServer.syncPolicy | nindent 4 }}
+    {{- end }}
+{{- end -}}
+

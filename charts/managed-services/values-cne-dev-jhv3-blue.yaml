@@ -1,0 +1,26 @@
+awsLoadBalancerController:
+  enabled: true
+  
+externalDns:
+  enabled: true
+
+externalSecrets:
+  enabled: true
+
+glooEdge:
+  enabled: false
+
+insights:
+  enabled: false
+
+metricsServer:
+  enabled: true
+
+polaris:
+  enabled: false
+  
+reloader: 
+  enabled: true
+
+trivy: 
+  enabled: false

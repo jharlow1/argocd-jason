@@ -7,9 +7,5 @@ commonLabels:
   app.kubernetes.io/part-of: argocd
   app.kubernetes.io/managed-by: argocd
 
-commonAnnotations:
-  argocd.argoproj.io/hook: PreSync
-  argocd.argoproj.io/sync-wave: "1"
-
 resources:
-  - managed-services.yaml
+  - managed-services

@@ -1,0 +1,72 @@
+{{- if .Values.awsLoadBalancerController.enabled -}}
+apiVersion: argoproj.io/v1alpha1 
+kind: Application 
+metadata:
+  name: 'aws-load-balancer-controller-{{ .Values.cluster }}'
+  namespace: {{ .Values.argocd.namespace }}
+  labels:
+    {{- include "commonLabels" . | nindent 4 }}
+  annotations:
+    {{- include "commonAnnotations" . | nindent 4 }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: {{ .Values.argocd.project }}
+  destination:
+    namespace: {{ .Values.awsLoadBalancerController.namespace }}
+    server: {{ .Values.argocd.destServer }}
+  ignoreDifferences:
+    {{- toYaml .Values.argocd.ignoreDifferences | nindent 4 }}
+    {{- if .Values.awsLoadBalancerController.ignoreDifferences }}
+    {{- toYaml .Values.awsLoadBalancerController.ignoreDifferences | nindent 4 }}
+    {{- end }}
+  source: 
+    chart: aws-load-balancer-controller
+    repoURL: https://aws.github.io/eks-charts
+    targetRevision: {{ .Values.awsLoadBalancerController.targetRevision }}
+    helm:
+      releaseName: aws-load-balancer-controller
+      values: |-
+        replicaCount: {{ .Values.awsLoadBalancerController.replicas }}
+        clusterName: {{ .Values.cluster }}
+        image:
+          pullPolicy: Always
+        serviceAccount: 
+          annotations:
+            "eks.amazonaws.com/role-arn": arn:aws:iam::{{ .Values.account }}:role/{{ .Values.cluster }}-aws-load-balancer-controller-irsa
+        podSecurityContext:
+          fsGroup: 1000
+          runAsGroup: 1000
+          runAsUser: 1000
+        securityContext:
+          capabilities:
+            drop: [ALL]
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+        resources:
+          {{- toYaml .Values.awsLoadBalancerController.resources | nindent 10 }}
+        ingressClass: alb
+        createIngressClassResource: true
+        vpcId: {{ .Values.vpc }}
+        region: {{ .Values.region }}
+        enableWaf: {{ .Values.awsLoadBalancerController.enableWaf }}
+        logLevel: {{ .Values.awsLoadBalancerController.logLevel }}
+        hostNetwork: {{ .Values.awsLoadBalancerController.hostNetwork }}
+        defaultTags:
+          Environment: {{ .Values.environment | title }}
+          Stack: {{ .Values.stack | title }}
+          ProjectName: {{ .Values.project }}
+          Region: {{ .Values.region }}
+          SSLCertificate: {{ include "sslCertArn" (dict "root" .Values "component" .Values.awsLoadBalancerController) }}
+          WAF: {{ .Values.wafv2AclArn }}
+        {{- with .Values.awsLoadBalancerController.values }}
+        {{- . | nindent 8 }}
+        {{- end }}
+  syncPolicy: 
+    {{- toYaml .Values.argocd.defaultSyncPolicy | nindent 4 }}
+    {{- if .Values.awsLoadBalancerController.syncPolicy }}
+    {{- toYaml .Values.awsLoadBalancerController.syncPolicy | nindent 4 }}
+    {{- end }}
+{{- end -}}
+

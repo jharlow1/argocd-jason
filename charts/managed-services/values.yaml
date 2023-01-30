@@ -1,0 +1,287 @@
+env: dev
+region: us-west-2
+stack: blue
+cloud: aws
+
+# The following blocks are inherited from cluster labels and passed in via ArgoCD in the applicationset
+# that calls this helm chart. For testing purposes outside ArgoCD, these are mocked out in mock_values.yaml as well.
+
+# vertexLabels:
+#   cloudProvider:
+#   kubernetesProvider:
+#   region:
+#   stack:
+#   environment:
+#   shortEnv:
+#   shortName:
+#   vpc:
+#   account:
+#
+# vertexAnnotations:
+#    owner:
+#    product:
+#    sourceCode:
+#    documentation:
+#    defaultDomain:
+#    sslCertArns:
+#    internalInboundCidrs:
+#    wafv2AclArn:
+#    publicDnsZones:
+#    privateDnsZones:
+
+argocd:
+  #cluster: <Inherited via applicationset>
+  #destServer: <Inherited via applicationset>
+  namespace: argocd
+  project: managed-services
+  ignoreDifferences:
+    - group: argoproj.io
+      jsonPointers:
+        - /status
+      kind: Application
+  defaultSyncPolicy:
+    automated:
+      allowEmpty: true
+      prune: true
+      selfHeal: true
+
+awsLoadBalancerController:
+  enabled: true
+  targetRevision: 1.4.5
+  namespace: aws-load-balancer-controller
+  replicas: 2
+  enableWaf: true
+  logLevel: error
+  hostNetwork: false
+  resources:
+    limits:
+      cpu: 200m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  values: |-
+    # Custom Values to append
+
+certManager:
+  enabled: false 
+  targetRevision: v1.10.1
+  namespace: cert-manager 
+  replicas: 1
+  webhook:
+    replicas: 1
+  cainjector:
+    enabled: true
+    replicas: 1
+  startupapicheck:
+    enabled: true 
+    replicas: 1
+  values: |-
+    # Custom Values to append
+
+externalDns:
+  enabled: true
+  targetRevision: 1.11.0
+  namespace: external-dns
+  replicas: 2
+  nameFilters:
+    - platdev.vtxdev.net
+  resources:
+    limits:
+      cpu: 50m
+      memory: 50Mi
+    requests:
+      memory: 50Mi
+      cpu: 20m
+  values: |-
+    # Custom Values to append
+
+externalSecrets:
+  enabled: true
+  targetRevision: 0.6.0
+  namespace: external-secrets
+  replicas: 2
+  resources:
+    limits:
+      cpu: 50m
+      memory: 64Mi
+    requests:
+      cpu: 10m
+      memory: 32Mi
+  webhook:
+    replicas: 2
+    resources:
+      limits:
+        cpu: 50m
+        memory: 64Mi
+      requests:
+        cpu: 10m
+        memory: 32Mi
+  certController:
+    resources:
+      limits:
+        cpu: 50m
+        memory: 64Mi
+      requests:
+        cpu: 10m
+        memory: 32Mi
+  values: |-
+    # Custom Values to append
+
+glooEdge:
+  enabled: false
+  targetRevision: 1.12.32
+  namespace: gloo-system
+  gateway:
+    enabled: true 
+    nlb:
+      attributes:
+        - load_balancing.cross_zone.enabled=true
+  albIngress:
+    enabled: false 
+  gateways:
+    internal:
+      enabled: false
+    external:
+      enabled: false
+  values: |-
+    # Custom Values to append
+
+insights:
+  enabled: false
+  targetRevision: 2.8.3
+  namespace: insights-agent
+  organization: "vertex-cne"
+  base64token: ""
+  config: 
+    admission:
+      enabled: false
+    goldilocks:
+      enabled: true
+    kube-bench:
+      enabled: true
+    kube-hunter:
+      enabled: true
+    nova:
+      enabled: true
+    opa:
+      enabled: true
+    pluto:
+      enabled: true
+    polaris:
+      enabled: true
+      config:
+        checks:
+          vtxDeploymentLabelsAnnotations: ignore
+
+        customChecks:
+          vtxDeploymentLabelsAnnotations:
+            successMessage: Vertex labels and annotations are correct 
+            failureMessage: Vertex missing labels and annotations
+            category: Efficiency
+            target: apps/Deployment 
+            schema: 
+              '$schema': http://json-schema.org/draft-07/schema 
+              type: object
+              properties:
+                metadata:
+                  type: object
+                  required: 
+                    - labels
+                    - annotations
+                  properties:
+                    labels:
+                      type: object
+                      required: 
+                        - app
+                        - app.kubernetes.io/name
+                      properties:
+                        app:
+                          type: string 
+                        app.kubernetes.io/name:
+                          type: string
+                    annotations:
+                      type: object 
+                      required: 
+                        - vertexinc.com/owner
+                        - vertexinc.com/product 
+                        - vertexinc.com/source-code
+                        - vertexinc.com/documentation
+                      properties:
+                        vertexinc.com/owner:
+                          type: string 
+                          pattern: ^(?i)[a-z0-9.-]+@vertexinc.com$
+                        vertexinc.com/product:
+                          type: string 
+                        vertexinc.com/source-code:
+                          type: string 
+                          pattern: '^(?i)https?://.*$'
+                        vertexinc.com/documentation:
+                          type: string 
+                          pattern: '^(?i)https?://.*$'
+    prometheus-metrics:
+      enabled: true
+      installPrometheusServer: true
+    rbac-reporter:
+      enabled: true
+    trivy:
+      enabled: true
+
+metricsServer:
+  enabled: true
+  targetRevision: 3.8.2
+  namespace: metrics-server
+  replicas: 2
+  hostNetwork: false
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m 
+      memory: 70Mi 
+  values: |-
+    # Custom Values to append
+
+polaris:
+  enabled: false
+  targetRevision: 5.6.1
+  namespace: polaris
+  dashboard:
+    enabled: true
+    logLevel: Error
+    replicas: 2
+    resources:
+      requests:
+        cpu: "1"
+        memory: 1Gi
+      limits:
+        cpu: "4"
+        memory: 5Gi
+  webhook:
+    enabled: false  
+  values: |-
+    # Custom Values to append
+    
+reloader:
+  enabled: true
+  targetRevision: v0.0.124
+  namespace: reloader
+  replicas: 1
+  resources:
+    limits:
+      cpu: 100m
+      memory: 512Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  values: |-
+    # Custom Values to append
+
+trivy:
+  enabled: false
+  targetRevision: 0.5.0
+  namespace: trivy-system
+  replicaCount: 1
+  values: |-
+    # Custom Values to append

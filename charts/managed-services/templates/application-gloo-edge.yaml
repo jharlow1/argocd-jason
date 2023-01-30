@@ -1,0 +1,68 @@
+{{- if .Values.glooEdge.enabled -}}
+apiVersion: argoproj.io/v1alpha1 
+kind: Application 
+metadata:
+  name: 'gloo-edge-{{ .Values.cluster }}'
+  namespace: {{ .Values.argocd.namespace }}
+  labels:
+    {{- include "commonLabels" . | nindent 4 }}
+  annotations:
+    {{- include "commonAnnotations" . | nindent 4 }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: {{ .Values.argocd.project }}
+  destination:
+    namespace: {{ .Values.glooEdge.namespace }}
+    server: {{ .Values.argocd.destServer }}
+  ignoreDifferences:
+    {{- toYaml .Values.argocd.ignoreDifferences | nindent 4 }}
+    {{- if .Values.glooEdge.ignoreDifferences }}
+    {{- toYaml .Values.glooEdge.ignoreDifferences | nindent 4 }}
+    {{- end }}
+  source: 
+    chart: gloo
+    repoURL: https://storage.googleapis.com/solo-public-helm
+    targetRevision: {{ .Values.glooEdge.targetRevision }}
+    helm:
+      releaseName: gloo-edge
+      values: |-
+        gateway:
+          enabled: {{ .Values.glooEdge.gateway.enabled }}
+        albIngress:
+          enabled: {{ .Values.glooEdge.albIngress.enabled }}
+        gatewayProxies:
+          gatewayProxy:
+            gatewaySettings:
+              enabled: false
+              disableGeneratedGateways: true
+        {{- if .Values.glooEdge.gateways.internal.enabled }}
+          gatewayProxyInternal:
+            service:
+              name: gateway-proxy-internal
+              type: NodePort
+              httpPort: 80
+            gatewaySettings:
+              enabled: true
+              disableHttpsGateway: true
+        {{- end }}
+        {{- if .Values.glooEdge.gateways.external.enabled }}
+          gatewayProxyExternal:
+            service:
+              name: gateway-proxy-external
+              type: NodePort
+              httpPort: 80
+            gatewaySettings:
+              enabled: true
+              disableHttpsGateway: true
+        {{- end }}
+        {{- with .Values.glooEdge.values }}
+        {{- . | nindent 6 }}
+        {{- end }}
+  syncPolicy: 
+    {{- toYaml .Values.argocd.defaultSyncPolicy | nindent 4 }}
+    {{- if .Values.glooEdge.syncPolicy }}
+    {{- toYaml .Values.glooEdge.syncPolicy | nindent 4 }}
+    {{- end }}
+{{- end -}}
+
