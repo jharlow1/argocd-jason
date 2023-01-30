@@ -1,0 +1,8 @@
+external_dns:
+  extraArgs:
+    - '--annotation-filter=vertexinc.com/dns-zone in (private)'
+    - '--aws-zone-type=private'
+    - '--zone-id-filter=Z09555521T6TE5WXR2IX0'
+    - '--zone-id-filter=Z0243034EFQ5QGU0UOPJ'
+  zoneNameFilters:
+    - platdev.vtxdev.net
