@@ -42,6 +42,8 @@ argocd:
       allowEmpty: true
       prune: true
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
 
 awsLoadBalancerController:
   enabled: true
