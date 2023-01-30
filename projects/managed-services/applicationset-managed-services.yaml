@@ -31,7 +31,7 @@ spec:
           kind: Application
       project: managed-services
       destination:
-        server: "{{ server }}"
+        server: "https://kubernetes.default.svc"
         namespace: argocd
       source:
         repoURL: "{{ metadata.annotations.vertexinc.com/argocd-config-repo }}"
