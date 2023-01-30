@@ -29,7 +29,7 @@ spec:
           jsonPointers:
             - /status
           kind: Application
-      project: system-core
+      project: managed-services
       destination:
         server: "{{ server }}"
         namespace: argocd
