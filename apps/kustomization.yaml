@@ -22,3 +22,4 @@ namespace: argocd
 resources:
   - metrics-server
   - reloader
+  - external-dns-private
