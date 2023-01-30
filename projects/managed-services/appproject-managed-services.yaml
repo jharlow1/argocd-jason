@@ -22,6 +22,8 @@ spec:
     - https://storage.googleapis.com/solo-public-helm
     - https://charts.jetstack.io
   destinations:
+    - namespace: "argocd"
+      server: "https://kubernetes.default.svc"
     - namespace: "aws-load-balancer-controller"
       server: "*"
     - namespace: "external-dns"
