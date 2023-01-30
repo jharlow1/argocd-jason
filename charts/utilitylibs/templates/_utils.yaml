@@ -18,12 +18,12 @@ alb.ingress.kubernetes.io/group.name: {{ include "elbGroupName" (dict "root" .ro
 alb.ingress.kubernetes.io/healthcheck-path: {{ .component.healthCheckPath | default "/health" }}
 alb.ingress.kubernetes.io/inbound-cidrs: {{ include "inboundCidrs" (dict "root" .root "component" .component) }}
 alb.ingress.kubernetes.io/listen-ports: {{ .component.listenPort | default "'[{\"HTTPS\":443}]'" }}
-alb.ingress.kubernetes.io/load-balancer-attributes: 'access_logs.s3.enabled=true,access_logs.s3.bucket=vtx-logs-lb-{{ .root.region }}'
+alb.ingress.kubernetes.io/load-balancer-attributes: 'access_logs.s3.enabled=true,access_logs.s3.bucket=vtx-logs-lb-{{ .root.vertexLabels.region }}'
 alb.ingress.kubernetes.io/scheme: {{ .component.exposure }}
 alb.ingress.kubernetes.io/ssl-policy: {{ .root.sslPolicy | default "ELBSecurityPolicy-TLS-1-2-Ext-2018-06" }}
 alb.ingress.kubernetes.io/tags: >-
-  Monitoring=Enabled,Environment={{ .root.environment | title }},Stack={{ .root.stack | title }},Region={{ .root.region }},alb.ingress.kubernetes.io/scheme={{ .component.exposure }}
-alb.ingress.kubernetes.io/wafv2-acl-arn: {{ .root.wafv2AclArn }}
+  Monitoring=Enabled,Environment={{ .root.vertexLabels.environment | title }},Stack={{ .root.vertexLabels.stack | title }},Region={{ .root.vertexLabels.region }},alb.ingress.kubernetes.io/scheme={{ .component.exposure }}
+alb.ingress.kubernetes.io/wafv2-acl-arn: {{ .root.vertexAnnotations.wafv2AclArn }}
 {{- end -}}
 
 {{/*
@@ -56,11 +56,11 @@ app.kubernetes.io/instance: argocd
 app.kubernetes.io/part-of: argocd 
 app.kubernetes.io/managed-by: argocd 
 vertexinc.com/created_using: argocd
-vertexinc.com/environment: {{ .Values.environment }}
-vertexinc.com/region: {{ .Values.region }}
-vertexinc.com/stack: {{ .Values.stack }}
-vertexinc.com/cluster: {{ .Values.cluster }}
-vertexinc.com/cloud: {{ .Values.cloudProvider }}
+vertexinc.com/environment: {{ .Values.vertexLabels.environment }}
+vertexinc.com/region: {{ .Values.vertexLabels.region }}
+vertexinc.com/stack: {{ .Values.vertexLabels.stack }}
+vertexinc.com/cluster: {{ .Values.vertexLabels.cluster }}
+vertexinc.com/cloud: {{ .Values.vertexLabels.cloudProvider }}
 {{- end -}}
 
 {{/*
@@ -87,8 +87,8 @@ Usage:
 
 */}}
 {{- define "sslCertArn" -}}
-{{- $sslArns := fromJson (.root.sslCertArns | replace "'" "") -}}
-{{- $domain := or .component.domainName .root.defaultDomain -}}
+{{- $sslArns := fromJson (.root.vertexAnnotations.sslCertArns | replace "'" "") -}}
+{{- $domain := or .component.domainName .root.vertexAnnotations.defaultDomain -}}
 {{- get $sslArns $domain -}}
 {{- end -}}
 
@@ -107,7 +107,7 @@ Usage:
 
 */}}
 {{- define "serviceHostname" -}}
-{{- $domain := or .component.domainName .root.defaultDomain -}}
+{{- $domain := or .component.domainName .root.vertexAnnotations.defaultDomain -}}
 {{- $shortEnv := .root.shortEnv -}}
 {{- $svcName := .name -}}
 {{- printf "%s-%s.%s" $svcName $shortEnv $domain -}}
@@ -130,7 +130,7 @@ Usage:
 
 */}}
 {{- define "elbGroupName" -}}
-{{- $grpName := list .root.cluster .component.groupIdentifier .component.exposure -}}
+{{- $grpName := list .root.argocd.cluster .component.groupIdentifier .component.exposure -}}
 {{- join "-" $grpName -}}
 {{- end -}}
 
@@ -152,7 +152,7 @@ Usage:
 {{- if .component.inboundCidrs -}}
 {{- printf "%s" .component.inboundCidrs -}}
 {{- else if eq .component.exposure "internal" -}}
-{{- printf "%s" .root.internalInboundCidrs -}}
+{{- printf "%s" .root.vertexAnnotations.internalInboundCidrs -}}
 {{- else -}}
 {{- printf "%s" "0.0.0.0/0" -}}
 {{- end -}}
@@ -174,9 +174,9 @@ Usage:
 
 */}}
 {{- define "externalDnsHostnames" -}}
-{{- $hostnames := list (printf "%s-%s-%s-%s.%s" .svcName .component.exposure .root.shortName .root.stack .root.defaultDomain) -}}
+{{- $hostnames := list (printf "%s-%s-%s-%s.%s" .svcName .component.exposure .root.vertexLabels.shortName .root.vertexLabels.stack .root.vertexAnnotations.defaultDomain) -}}
 {{- range .component.dnsHostnames -}}
-{{- $hostnames = append $hostnames (printf "%s-%s-%s.%s" . $.root.shortName $.root.stack $.root.defaultDomain) -}}
+{{- $hostnames = append $hostnames (printf "%s-%s-%s.%s" . $.root.vertexLabels.shortName $.root.vertexLabels.stack $.root.vertexAnnotations.defaultDomain) -}}
 {{- end -}}
 {{- range .component.dnsCustFQDNs -}}
 {{- $hostnames = append $hostnames . -}}

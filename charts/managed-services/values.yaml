@@ -1,33 +1,31 @@
-env: dev
-region: us-west-2
-stack: blue
-cloud: aws
+# Not sure the best place to put this
+shortEnv: dev
 
 # The following blocks are inherited from cluster labels and passed in via ArgoCD in the applicationset
 # that calls this helm chart. For testing purposes outside ArgoCD, these are mocked out in mock_values.yaml as well.
 
 # vertexLabels:
+#   account:
 #   cloudProvider:
+#   environment:
 #   kubernetesProvider:
 #   region:
-#   stack:
-#   environment:
 #   shortEnv:
 #   shortName:
+#   stack:
 #   vpc:
-#   account:
 #
 # vertexAnnotations:
-#    owner:
-#    product:
-#    sourceCode:
-#    documentation:
 #    defaultDomain:
-#    sslCertArns:
+#    documentation:
 #    internalInboundCidrs:
-#    wafv2AclArn:
-#    publicDnsZones:
+#    owner:
 #    privateDnsZones:
+#    product:
+#    publicDnsZones:
+#    sourceCode:
+#    sslCertArns:
+#    wafv2AclArn:
 
 argocd:
   #cluster: <Inherited via applicationset>
