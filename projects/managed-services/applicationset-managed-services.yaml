@@ -36,7 +36,7 @@ spec:
       source:
         repoURL: "{{ metadata.annotations.vertexinc.com/argocd-config-repo }}"
         targetRevision: "{{ metadata.labels.vertexinc.com/revision }}"
-        path: charts/managed-services
+        path: charts/project-managed-services
         helm:
           valueFiles:
             - values.yaml
