@@ -1,12 +1,12 @@
 {{- if .Values.externalDns.enabled -}}
-{{- $publicDnsZoneIds := values (fromJson (.Values.publicDnsZones | replace "'" "")) -}}
-{{- $privateDnsZoneIds := values (fromJson (.Values.privateDnsZones | replace "'" "")) -}}
+{{- $publicDnsZoneIds := values (fromJson (.Values.vertexAnnotations.publicDnsZones | replace "'" "")) -}}
+{{- $privateDnsZoneIds := values (fromJson (.Values.vertexAnnotations.privateDnsZones | replace "'" "")) -}}
 {{- range $exposure := list "public" "private" }}
 ---
 apiVersion: argoproj.io/v1alpha1 
 kind: Application 
 metadata:
-  name: 'external-dns-{{ $exposure }}-{{ $.Values.cluster }}'
+  name: 'external-dns-{{ $exposure }}-{{ $.Values.argocd.cluster }}'
   namespace: {{ $.Values.argocd.namespace }}
   labels:
     {{- include "commonLabels" $ | nindent 4 }}
@@ -35,7 +35,7 @@ spec:
         serviceAccount:
           create: true 
           annotations:
-            eks.amazonaws.com/role-arn: arn:aws:iam::{{ $.Values.account }}:role/{{ $.Values.cluster }}-external-dns-irsa
+            eks.amazonaws.com/role-arn: arn:aws:iam::{{ $.Values.vertexLabels.account }}:role/{{ $.Values.argocd.cluster }}-external-dns-irsa
         image:
           pullPolicy: Always
         resources:

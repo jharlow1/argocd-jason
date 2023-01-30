@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1 
 kind: Application 
 metadata:
-  name: 'metrics-server-{{ .Values.cluster }}'
+  name: 'metrics-server-{{ .Values.argocd.cluster }}'
   namespace: {{ .Values.argocd.namespace }}
   labels:
     {{- include "commonLabels" . | nindent 4 }}

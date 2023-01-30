@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1 
 kind: Application 
 metadata:
-  name: 'reloader-{{ .Values.cluster }}'
+  name: 'reloader-{{ .Values.argocd.cluster }}'
   namespace: {{ .Values.argocd.namespace }}
   labels:
     {{- include "commonLabels" . | nindent 4 }}

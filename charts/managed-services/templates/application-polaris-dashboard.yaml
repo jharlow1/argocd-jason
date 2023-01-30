@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1 
 kind: Application 
 metadata:
-  name: 'polaris-{{ .Values.cluster }}'
+  name: 'polaris-{{ .Values.argocd.cluster }}'
   namespace: {{ .Values.argocd.namespace }}
   labels:
     {{- include "commonLabels" . | nindent 4 }}
@@ -43,8 +43,8 @@ spec:
             annotations:
               vertexinc.com/dns-zone: private
               external-dns.alpha.kubernetes.io/alias: 'true'
-              external-dns.alpha.kubernetes.io/aws-region: {{ .Values.region }}
-              external-dns.alpha.kubernetes.io/set-identifier: polaris-{{ .Values.shortEnv }}-{{ .Values.stack }}-{{ .Values.region }}
+              external-dns.alpha.kubernetes.io/aws-region: {{ .Values.vertexLabels.region }}
+              external-dns.alpha.kubernetes.io/set-identifier: polaris-{{ .Values.shortEnv }}-{{ .Values.vertexLabels.stack }}-{{ .Values.vertexLabels.region }}
               external-dns.alpha.kubernetes.io/hostname: custom-{{ include "serviceHostname" (dict "root" .Values "component" .Values.polaris "name" "polaris") }}
         webhook:
           enable: {{ .Values.polaris.webhook.enabled }}

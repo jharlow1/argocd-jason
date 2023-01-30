@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1 
 kind: Application 
 metadata:
-  name: 'aws-load-balancer-controller-{{ .Values.cluster }}'
+  name: 'aws-load-balancer-controller-{{ .Values.argocd.cluster }}'
   namespace: {{ .Values.argocd.namespace }}
   labels:
     {{- include "commonLabels" . | nindent 4 }}
@@ -28,12 +28,12 @@ spec:
       releaseName: aws-load-balancer-controller
       values: |-
         replicaCount: {{ .Values.awsLoadBalancerController.replicas }}
-        clusterName: {{ .Values.cluster }}
+        clusterName: {{ .Values.argocd.cluster }}
         image:
           pullPolicy: Always
         serviceAccount: 
           annotations:
-            "eks.amazonaws.com/role-arn": arn:aws:iam::{{ .Values.account }}:role/{{ .Values.cluster }}-aws-load-balancer-controller-irsa
+            "eks.amazonaws.com/role-arn": arn:aws:iam::{{ .Values.vertexLabels.account }}:role/{{ .Values.argocd.cluster }}-aws-load-balancer-controller-irsa
         podSecurityContext:
           fsGroup: 1000
           runAsGroup: 1000
@@ -48,18 +48,18 @@ spec:
           {{- toYaml .Values.awsLoadBalancerController.resources | nindent 10 }}
         ingressClass: alb
         createIngressClassResource: true
-        vpcId: {{ .Values.vpc }}
-        region: {{ .Values.region }}
+        vpcId: {{ .Values.vertexLabels.vpc }}
+        region: {{ .Values.vertexLabels.region }}
         enableWaf: {{ .Values.awsLoadBalancerController.enableWaf }}
         logLevel: {{ .Values.awsLoadBalancerController.logLevel }}
         hostNetwork: {{ .Values.awsLoadBalancerController.hostNetwork }}
         defaultTags:
-          Environment: {{ .Values.environment | title }}
-          Stack: {{ .Values.stack | title }}
-          ProjectName: {{ .Values.project }}
-          Region: {{ .Values.region }}
+          Environment: {{ .Values.vertexLabels.environment | title }}
+          Stack: {{ .Values.vertexLabels.stack | title }}
+          ProjectName: {{ .Values.vertexLabels.project }}
+          Region: {{ .Values.vertexLabels.region }}
           SSLCertificate: {{ include "sslCertArn" (dict "root" .Values "component" .Values.awsLoadBalancerController) }}
-          WAF: {{ .Values.wafv2AclArn }}
+          WAF: {{ .Values.vertexAnnotations.wafv2AclArn }}
         {{- with .Values.awsLoadBalancerController.values }}
         {{- . | nindent 8 }}
         {{- end }}

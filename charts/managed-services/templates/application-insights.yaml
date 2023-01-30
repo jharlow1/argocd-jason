@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1 
 kind: Application 
 metadata:
-  name: 'fairwinds-insights-{{ .Values.cluster }}'
+  name: 'fairwinds-insights-{{ .Values.argocd.cluster }}'
   namespace: {{ .Values.argocd.namespace }}
   labels:
     {{- include "commonLabels" . | nindent 4 }}
@@ -29,7 +29,7 @@ spec:
       values: |-
         insights:
           organization: {{ .Values.insights.organization }}
-          cluster: {{ .Values.cluster }}
+          cluster: {{ .Values.argocd.cluster }}
           base64token: {{ .Values.insights.base64token }}
           {{- toYaml .Values.insights.config | nindent 8 }}
         {{- with .Values.metricsServer.values }}
