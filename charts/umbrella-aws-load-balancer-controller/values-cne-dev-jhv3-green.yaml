@@ -1,0 +1,17 @@
+aws-load-balancer-controller:
+  clusterName: cne-dev-jhv3-green
+  serviceAccount:
+    annotations:
+      "eks.amazonaws.com/role-arn": arn:aws:iam::149745434630:role/cne-dev-green-aws-load-balancer-controller-irsa
+  vpcId: vpc-09a37a7d46fa079f5
+  region: us-west-2
+  enableWaf: true
+  logLevel: error
+  hostNetwork: true
+  defaultTags:
+    Environment: Development
+    Stack: Green
+    ProjectName: cne
+    Region: us-west-2
+    SSLCertificate: arn:aws:acm:us-west-2:149745434630:certificate/c23f840c-9219-47dc-8207-e80741714167
+    WAF: arn:aws:wafv2:us-west-2:149745434630:regional/webacl/VTX-CommonRuleSet/2856acf1-7b81-4735-a850-4da3d6c6eb5b
