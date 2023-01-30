@@ -33,7 +33,7 @@ spec:
             - values.yaml
             - values-{{ name }}.yaml
           parameters:
-            - name: "external_dns.serviceAccount.annotations.eks\.amazonaws\.com/role-arn"
+            - name: "external_dns.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
               value: arn:aws:iam::{{ metadata.labels.vertexinc.com/account }}:role/{{ name }}-external-dns-irsa
           ignoreMissingValueFiles: true
       syncPolicy:
