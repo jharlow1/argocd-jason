@@ -1,5 +1,6 @@
 # Not sure the best place to put this
 shortEnv: dev
+dummy: values
 
 # The following blocks are inherited from cluster labels and passed in via ArgoCD in the applicationset
 # that calls this helm chart. For testing purposes outside ArgoCD, these are mocked out in mock_values.yaml as well.
